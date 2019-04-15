@@ -1,6 +1,7 @@
 import os
 import time
 from celery import Celery
+from celery import group
 import logging
 from logging.handlers import RotatingFileHandler
 import requests
@@ -72,8 +73,8 @@ def add(x: int, y: int) -> int:
 
 
 @celery.task(name='tasks.upload')
-def upload() -> str:
+def upload(url: str) -> str:
     img_url= "https://cdn0.tnwcdn.com/wp-content/blogs.dir/1/files/2018/06/instagram-796x431.png"
-    image_link = upload_imgur(download_image(img_url))    
+    image_link = upload_imgur(download_image(url))    
     return image_link
 

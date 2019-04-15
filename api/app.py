@@ -16,34 +16,52 @@ pending=[]
 completed=[]
 failed=[]
 
+urls= '''
+    {
+    "urls": [
+        "https://farm3.staticflickr.com/2879/11234651086_681b3c2c00_b_d.jpg",
+        "https://farm4.staticflickr.com/3790/11244125445_3c2f32cd83_k_d.jpg"
+        ]
+    }
+
+'''
+
 
 Jobs='''
 {
-	"jobs":[
-	   {
+  
         "id": "id",
         "created": "created",
-        "finished": "finished",
+        "finished": null,
         "status": "in-progress",
          "uploaded": {
-                "pending": "pending",
-                "completed": "completed",
-                "failed": null
+                "pending": [],
+                "completed": [],
+                "failed": [null]
 
-         }
-	   }
-
-	]
-
+        }
 }
 '''
+ 
+def get_urllist(data):
+    urls_json=json.loads(data)
+    url_list=[]
+    for value in urls_json['urls']:
+        app.logger.info(value)
+        url_list.append(value)
+    return url_list
  
 
 
 @app.route('/add')
-def add() -> str:
+def upload(url) -> str:
     task = celery.send_task('tasks.upload')
-    app.logger.info(type(task))
+    get_list=get_urllist(urls)
+    for url in getlist:
+        task.subtask(url)
+        
+
+    # app.logger.info(str(get_urllist(urls)))
     response = f"<a href='{url_for('check_task', task_id=task.id, external=True)}'>check status of {task.id} </a> <body> toolbar </body>"
     return response
 
@@ -58,8 +76,8 @@ def add() -> str:
 def check_task(task_id: str) -> str:
     res = celery.AsyncResult(task_id)
     my_json=json.loads(Jobs)
-    my_json['jobs'][0]['id']=task_id
-    my_json['jobs'][0]['created']=datetime.now()
+    my_json['id']=task_id
+    my_json['created']=datetime.now()
     return jsonify(my_json)
 
     # if res.state == states.PENDING:
