@@ -9,7 +9,7 @@ WORKDIR /api
 COPY requirements.txt /requirements.txt
 # install requirements
 RUN pip install -r /requirements.txt
-
+RUN mkdir -p /upload_files
 # expose the app port
 EXPOSE 8080
 

@@ -9,6 +9,7 @@ services:
       - "80:8080"
     volumes:
       - .:/api
+      - ./images:/upload_files
     # entrypoint:
     #   - /api/docker_script.sh
     depends_on:
