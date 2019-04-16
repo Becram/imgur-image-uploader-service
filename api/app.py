@@ -12,11 +12,10 @@ app.config['SECRET_KEY'] = 'Dont tell'
 toolbar = DebugToolbarExtension(app)
 
 UPLOAD_FOLDER = "/upload_files"
-pending=[]
-completed=[]
-failed=[]
+pending = []
+completed = []
 
-urls= '''
+urls = '''
     {
     "urls": [
         "https://farm3.staticflickr.com/2879/11234651086_681b3c2c00_b_d.jpg",
@@ -27,9 +26,8 @@ urls= '''
 '''
 
 
-Jobs='''
+Jobs = '''
 {
-  
         "id": "id",
         "created": "created",
         "finished": null,
@@ -42,24 +40,23 @@ Jobs='''
         }
 }
 '''
- 
+
+
 def get_urllist(data):
-    urls_json=json.loads(data)
-    url_list=[]
+    urls_json = json.loads(data)
+    url_list = []
     for value in urls_json['urls']:
         app.logger.info(value)
         url_list.append(value)
     return url_list
- 
 
 
 @app.route('/add')
-def upload(url) -> str:
-    task = celery.send_task('tasks.upload')
-    get_list=get_urllist(urls)
-    for url in getlist:
-        task.subtask(url)
-        
+def upload(url):
+    task = celery.send_task('tasks.upload', args=[url], kwargs={})
+    # get_list = get_urllist(urls)
+    # for url in getlist:
+    #     task.subtask(url)
 
     # app.logger.info(str(get_urllist(urls)))
     response = f"<a href='{url_for('check_task', task_id=task.id, external=True)}'>check status of {task.id} </a> <body> toolbar </body>"
@@ -75,19 +72,17 @@ def upload(url) -> str:
 @app.route('/check/<string:task_id>')
 def check_task(task_id: str) -> str:
     res = celery.AsyncResult(task_id)
-    my_json=json.loads(Jobs)
-    my_json['id']=task_id
-    my_json['created']=datetime.now()
+    my_json = json.loads(Jobs)
+    my_json['id'] = task_id
+    my_json['created'] = datetime.now()
     return jsonify(my_json)
 
     # if res.state == states.PENDING:
-
-
 
     #   return res.state
     # else:
     #   return str(res.result)
 
-if __name__ == '__main__':
- 	app.run(host="0.0.0.0", port=8080)
 
+if __name__ == '__main__':
+    app.run(host="0.0.0.0", port=8080)
