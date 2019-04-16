@@ -1,10 +1,12 @@
 from flask import *
 from flask import url_for
 from worker import celery
+from celery import signature
 import celery.states as states
 from flask_debugtoolbar import DebugToolbarExtension
 import logging
 from datetime import datetime
+from pprint import pprint
 
 app = Flask(__name__)
 app.debug = True
@@ -46,20 +48,27 @@ def get_urllist(data):
     urls_json = json.loads(data)
     url_list = []
     for value in urls_json['urls']:
-        app.logger.info(value)
         url_list.append(value)
     return url_list
 
 
 @app.route('/add')
-def upload(url):
-    task = celery.send_task('tasks.upload', args=[url], kwargs={})
+def upload():
+    
+    # upload_urls=get_urllist(urls)
+    # for url in upload_urls:
+
+    task=celery.send_task('tasks.upload', args=[urls])
+    
+    # task=get_urls.s(urls)
+
+    # task = celery.send_task('tasks.upload', args=[url], kwargs={})
     # get_list = get_urllist(urls)
     # for url in getlist:
     #     task.subtask(url)
 
     # app.logger.info(str(get_urllist(urls)))
-    response = f"<a href='{url_for('check_task', task_id=task.id, external=True)}'>check status of {task.id} </a> <body> toolbar </body>"
+    response = f"<a href='{url_for('check_task', task_id=task.id)}'>check status of {task.id} </a> <body> toolbar </body>"
     return response
 
 # @app.route('/add/<int:param1>/<int:param2>')
@@ -73,9 +82,20 @@ def upload(url):
 def check_task(task_id: str) -> str:
     res = celery.AsyncResult(task_id)
     my_json = json.loads(Jobs)
-    my_json['id'] = task_id
-    my_json['created'] = datetime.now()
-    return jsonify(my_json)
+    if res.state == 'PENDING':
+        app.logger.info(res.info.get('pending', 'bikram.com'))
+        # my_json['id'] = task_id
+        # my_json['created'] = datetime.now()
+        my_json['uploaded']['pending']= res.info.get('pending','bikram')
+        # my_json['uploaded']['completed']= task.info['completed']
+        return jsonify(my_json)
+    else:
+        app.logger.info(res.info.get('pending', 'bikram.com'))
+        # my_json['id'] = task_id
+        # my_json['created'] = datetime.now()
+        my_json['uploaded']['completed']= res.info.get('completed','bikram')
+        return jsonify(my_json)
+    
 
     # if res.state == states.PENDING:
 

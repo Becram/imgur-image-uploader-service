@@ -8,6 +8,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 import requests
 import sys
+import json
 
 
 CELERY_BROKER_URL = os.environ.get(
@@ -69,7 +70,6 @@ def get_urllist(data):
     urls_json = json.loads(data)
     url_list = []
     for value in urls_json['urls']:
-        app.logger.info(value)
         url_list.append(value)
     return url_list
 
@@ -80,16 +80,35 @@ def add(x: int, y: int) -> int:
     return x + y
 
 
-@celery.task(name='tasks.upload')
+
 def get_url(x: str) -> str:
 	group_urls = []
 	url_list = get_urllist(x)
-	for url in url_list['urls']:
+	for url in url_list:
 		group_urls.append('upload_image({})'.format(url))
 	fetch_jobs = group(group_urls)
 	return chord(fetch_jobs).get()
 
-def upload_image(url: str) -> str:
-    img_url = "https://cdn0.tnwcdn.com/wp-content/blogs.dir/1/files/2018/06/instagram-796x431.png"
-    image_link = upload_imgur(download_image(url))
-    return image_link
+# @celery.task(name='tasks.upload')
+# def upload_image(url: str) -> str:
+#     img_url = "https://cdn0.tnwcdn.com/wp-content/blogs.dir/1/files/2018/06/instagram-796x431.png"
+#     image_link = upload_imgur(download_image(url))
+#     return image_link
+
+
+@celery.task(name='tasks.upload', bind=True)
+def upload_task(self, urls):
+    url_list=get_urllist(urls)
+
+    for url in url_list:
+        self.update_state(state='in-progress',
+                        meta={'pending': url })
+        image_link = upload_imgur(download_image(url))
+        
+        self.update_state(state='in-progress',
+                          meta={'completed': image_link })
+
+
+    
+        time.sleep(1)
+    return {'total': 100, 'completed': 'completed!'}
