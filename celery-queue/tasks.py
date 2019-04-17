@@ -9,6 +9,9 @@ from logging.handlers import RotatingFileHandler
 import requests
 import sys
 import json
+from pprint import pprint
+from datetime import datetime
+from celery_once import QueueOnce
 
 
 CELERY_BROKER_URL = os.environ.get(
@@ -58,9 +61,9 @@ def upload_imgur(image_name):
         data['id'] = response.json()['data']['id']
         data['status'] = response.json()['status']
         data['link'] = response.json()['data']['link']
-        json_data = data
+        
         # logger.info(str(json_data))
-        return str(json_data)
+        return data
     except KeyError:
         link = "Failed"
         return link
@@ -99,16 +102,22 @@ def get_url(x: str) -> str:
 @celery.task(name='tasks.upload', bind=True)
 def upload_task(self, urls):
     url_list=get_urllist(urls)
-
+    completed_list=[]
+    
     for url in url_list:
         self.update_state(state='in-progress',
                         meta={'pending': url })
+        pprint(url)
         image_link = upload_imgur(download_image(url))
         
-        self.update_state(state='in-progress',
-                          meta={'completed': image_link })
+        if image_link['status'] == 200:
+            completed_list.append(image_link['link'])
+            self.update_state(state='in-progress',
+                        meta={'completed': image_link['link'] })
+        else:
 
-
-    
+            self.update_state(state='in-progress',
+                        meta={'completed': image_link['link'] })
         time.sleep(1)
-    return {'total': 100, 'completed': 'completed!'}
+        pprint(completed_list)
+    return {'status': 'completed', 'completed':completed_list, 'finished': datetime.now()}

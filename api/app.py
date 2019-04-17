@@ -9,9 +9,8 @@ from datetime import datetime
 from pprint import pprint
 
 app = Flask(__name__)
-app.debug = True
 app.config['SECRET_KEY'] = 'Dont tell'
-toolbar = DebugToolbarExtension(app)
+
 
 UPLOAD_FOLDER = "/upload_files"
 pending = []
@@ -37,12 +36,12 @@ Jobs = '''
          "uploaded": {
                 "pending": [],
                 "completed": [],
-                "failed": [null]
+                "failed": []
 
         }
 }
 '''
-
+my_json = json.loads(Jobs)
 
 def get_urllist(data):
     urls_json = json.loads(data)
@@ -54,46 +53,33 @@ def get_urllist(data):
 
 @app.route('/add')
 def upload():
-    
-    # upload_urls=get_urllist(urls)
-    # for url in upload_urls:
 
     task=celery.send_task('tasks.upload', args=[urls])
-    
-    # task=get_urls.s(urls)
-
-    # task = celery.send_task('tasks.upload', args=[url], kwargs={})
-    # get_list = get_urllist(urls)
-    # for url in getlist:
-    #     task.subtask(url)
-
-    # app.logger.info(str(get_urllist(urls)))
     response = f"<a href='{url_for('check_task', task_id=task.id)}'>check status of {task.id} </a> <body> toolbar </body>"
     return response
 
-# @app.route('/add/<int:param1>/<int:param2>')
-# def add(param1: int, param2: int) -> str:
-#     task = celery.send_task('tasks.add', args=[param1, param2], kwargs={})
-#     response = f"<a href='{url_for('check_task', task_id=task.id, external=True)}'>check status of {task.id} </a>"
-#     return response
 
 
 @app.route('/check/<string:task_id>')
 def check_task(task_id: str) -> str:
     res = celery.AsyncResult(task_id)
-    my_json = json.loads(Jobs)
-    if res.state == 'PENDING':
-        app.logger.info(res.info.get('pending', 'bikram.com'))
-        # my_json['id'] = task_id
-        # my_json['created'] = datetime.now()
-        my_json['uploaded']['pending']= res.info.get('pending','bikram')
-        # my_json['uploaded']['completed']= task.info['completed']
+    my_json['created'] = datetime.now()
+    my_json['id'] = task_id
+    if res.state == 'in-progress':
+        pprint("********PENING RESULT: {}".format(res.info))
+        if res.info.get('pending'):
+            my_json['uploaded']['pending']=res.info.get('pending')
+        if res.info.get('completed'):
+            my_json['uploaded']['completed'].append(res.info.get('completed'))
         return jsonify(my_json)
     else:
-        app.logger.info(res.info.get('pending', 'bikram.com'))
-        # my_json['id'] = task_id
-        # my_json['created'] = datetime.now()
-        my_json['uploaded']['completed']= res.info.get('completed','bikram')
+        pprint("********RESULT: {}".format(res.info))
+        if res.info.get('completed') and res.info.get('completed') not in my_json['uploaded']['completed']:
+            my_json['uploaded']['completed']=res.info.get('completed')
+        
+        my_json['uploaded']['pending']= None
+        my_json['finished']= res.info.get('finished')
+        my_json['status']= res.info.get('status')
         return jsonify(my_json)
     
 
@@ -105,4 +91,4 @@ def check_task(task_id: str) -> str:
 
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=8080)
+    app.run(host="0.0.0.0", port=8080, debug=True)
