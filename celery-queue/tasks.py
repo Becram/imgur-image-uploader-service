@@ -55,17 +55,32 @@ def upload_imgur(image_name):
     }
     response = requests.request(
         'POST', imgur_upload_url, headers=headers, files=payload)
-    try:
-        response_data = response.json()
+
+    response_data = response.json()
+    if response.json()['success'] == True:
         data['id'] = response.json()['data']['id']
         data['status'] = response.json()['status']
         data['link'] = response.json()['data']['link']
-        
-        # logger.info(str(json_data))
         return data
-    except KeyError:
-        link = "Failed"
-        return link
+    else:
+        data['error'] = response.json()['data']['error']
+        data['status'] = response.json()['status']
+
+        return data
+
+
+    # try:
+    #     pprint("**** {}".format(response.text))
+    #     response_data = response.json()
+    #     data['id'] = response.json()['data']['id']
+    #     data['status'] = response.json()['status']
+    #     data['link'] = response.json()['data']['link']
+        
+    #     # logger.info(str(json_data))
+    #     return data
+    # except KeyError:
+    #     link = "Failed"
+    #     return link
 
 
 def get_urllist(data):
@@ -104,6 +119,7 @@ def upload_task(self, urls):
 
     url_list=get_urllist(urls)
     completed_list=[]
+    error_list=[]
     
     for url in url_list:
         self.update_state(state='in-progress',
@@ -117,8 +133,9 @@ def upload_task(self, urls):
                         meta={'completed': image_link['link'], 'created':job_created, 'pending': None})
         else:
 
-            self.update_state(state='in-progress',
-                        meta={'completed': image_link['link'], 'created':job_created, 'pending': None})
+            self.update_state(state='failed',
+                        meta={'error':image_link['error']})
+            error_list.append("ERROR URL {}".format(url)+"==> "+image_link['error']['message'])
         time.sleep(1)
         pprint(completed_list)
-    return {'status': 'completed', 'completed':completed_list, 'finished': datetime.now(), 'created': job_created}
+    return {'status': 'completed', 'completed':completed_list, 'finished': datetime.now(), 'created': job_created,'error': error_list}
