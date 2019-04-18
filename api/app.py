@@ -63,20 +63,22 @@ def upload():
 @app.route('/check/<string:task_id>')
 def check_task(task_id: str) -> str:
     res = celery.AsyncResult(task_id)
-    my_json['created'] = datetime.now()
     my_json['id'] = task_id
     if res.state == 'in-progress':
         pprint("********PENING RESULT: {}".format(res.info))
+        if res.info.get('created'):
+            my_json['created']=res.info.get('created')
         if res.info.get('pending'):
             my_json['uploaded']['pending']=res.info.get('pending')
-        if res.info.get('completed'):
+        if res.info.get('completed') and res.info.get('completed') not in my_json['uploaded']['completed']:
             my_json['uploaded']['completed'].append(res.info.get('completed'))
         return jsonify(my_json)
     else:
         pprint("********RESULT: {}".format(res.info))
         if res.info.get('completed') and res.info.get('completed') not in my_json['uploaded']['completed']:
             my_json['uploaded']['completed']=res.info.get('completed')
-        
+        if res.info.get('created'):
+            my_json['created']=res.info.get('created')
         my_json['uploaded']['pending']= None
         my_json['finished']= res.info.get('finished')
         my_json['status']= res.info.get('status')

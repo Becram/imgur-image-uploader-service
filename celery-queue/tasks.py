@@ -21,7 +21,7 @@ CELERY_RESULT_BACKEND = os.environ.get(
 
 UPLOAD_FOLDER = "/upload_files"
 
-ALLOWED_EXTENSIONS = set(['json', 'jpeg', 'png', 'jpg'])
+ALLOWED_EXTENSIONS = set(['jpeg', 'png', 'jpg'])
 Client_ID = 'e5451a6ff4ab502'
 
 celery = Celery('tasks', broker=CELERY_BROKER_URL,
@@ -34,15 +34,14 @@ def get_filename(image_url):
 
 
 def download_image(image_url):
-    DEST = "/upload_files"
     response = requests.get(image_url, stream=True)
 
     # print(response.text)
     # response.raise_for_status()
-    with open(DEST + "/" + get_filename(image_url), "wb") as imageFile:
+    with open(UPLOAD_FOLDER + "/" + get_filename(image_url), "wb") as imageFile:
         for chunk in response.iter_content(1024):
             imageFile.write(chunk)
-    return DEST + "/" + get_filename(image_url)
+    return UPLOAD_FOLDER + "/" + get_filename(image_url)
 
 
 def upload_imgur(image_name):
@@ -101,23 +100,25 @@ def get_url(x: str) -> str:
 
 @celery.task(name='tasks.upload', bind=True)
 def upload_task(self, urls):
+    job_created= datetime.now()
+
     url_list=get_urllist(urls)
     completed_list=[]
     
     for url in url_list:
         self.update_state(state='in-progress',
-                        meta={'pending': url })
+                        meta={'completed': None,'pending': url, 'created':job_created})
         pprint(url)
         image_link = upload_imgur(download_image(url))
         
         if image_link['status'] == 200:
             completed_list.append(image_link['link'])
             self.update_state(state='in-progress',
-                        meta={'completed': image_link['link'] })
+                        meta={'completed': image_link['link'], 'created':job_created, 'pending': None})
         else:
 
             self.update_state(state='in-progress',
-                        meta={'completed': image_link['link'] })
+                        meta={'completed': image_link['link'], 'created':job_created, 'pending': None})
         time.sleep(1)
         pprint(completed_list)
-    return {'status': 'completed', 'completed':completed_list, 'finished': datetime.now()}
+    return {'status': 'completed', 'completed':completed_list, 'finished': datetime.now(), 'created': job_created}
