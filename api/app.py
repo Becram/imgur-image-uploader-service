@@ -3,16 +3,21 @@ from flask import url_for
 from worker import celery
 from celery import signature
 import celery.states as states
-from flask_debugtoolbar import DebugToolbarExtension
-import logging
 from datetime import datetime
 from pprint import pprint
-from jobs import job_list
 import random
+import logging
+from logging import Formatter, FileHandler
+
+
 
 app = Flask(__name__)
+
+# Setup logging
+
+
+
 app.config['SECRET_KEY'] = 'Dont tell'
-file_handler = logging.FileHandler('app.log')
 
 UPLOAD_FOLDER = "/upload_files"
 pending = []
@@ -66,6 +71,18 @@ def create_job():
     return jsonify({"jobId": celery_job.id})
 
 
+@app.route('/v1/images', methods=['GET'])
+def get_uploads():
+    images=[]
+    for job in jobs:
+        if len (job['uploaded']['completed']) != 0:
+            for img in job['uploaded']['completed']:
+                images.append(img)
+
+    return jsonify({'uploaded': images})
+
+
+
 
 @app.route('/v1/images/upload/<string:jobId>', methods=['GET'])
 def get_job(jobId):
@@ -75,7 +92,6 @@ def get_job(jobId):
         abort(404)
 
     if res.state == 'in-progress':
-        pprint("********PENING RESULT: {}".format(res.info))
         if res.info.get('created'):
             my_job[0]['created']=res.info.get('created')
         if res.info.get('pending'):
@@ -87,7 +103,6 @@ def get_job(jobId):
         if res.info.get('error'):
             my_job[0]['uploaded']['failed']= res.info.get('error')
     else:    
-        pprint("********RESULT: {}".format(res.info))
         if res.info.get('completed') and res.info.get('completed') not in my_job[0]['uploaded']['completed']:
             my_job[0]['uploaded']['completed']=res.info.get('completed')
         if res.info.get('created'):
@@ -98,10 +113,26 @@ def get_job(jobId):
         my_job[0]['finished']= res.info.get('finished')
         my_job[0]['status']= res.info.get('status')
         return jsonify(my_job[0])
-    # return jsonify(my_job[0])
 
 
 
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=8080, debug=True)
+     #Setup the logger
+    file_handler = FileHandler('output.log')
+    handler = logging.StreamHandler()
+    file_handler.setLevel(logging.DEBUG)
+    handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(Formatter(
+        '%(asctime)s %(levelname)s: %(message)s '
+        '[in %(pathname)s:%(lineno)d]'
+     ))
+    handler.setFormatter(Formatter(
+        '%(asctime)s %(levelname)s: %(message)s '
+        '[in %(pathname)s:%(lineno)d]'
+     ))
+    app.logger.addHandler(handler)
+    app.logger.addHandler(file_handler)
+    app.logger.setLevel(logging.DEBUG) 
+    # app.run(host="0.0.0.0", port=8080, debug=True)
+    app.run()
