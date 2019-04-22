@@ -14,6 +14,7 @@ ENV CELERY_RESULT_BACKEND redis://redis:6379/0
 WORKDIR /api
 
 COPY requirements.txt /requirements.txt
+
 # install requirements
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r /requirements.txt
@@ -21,10 +22,11 @@ RUN pip install --no-cache-dir -r /requirements.txt
 # expose the app port
 EXPOSE 8080
 
+#Code ownership
 RUN chown -R flask:flaskgroup /api
 
 USER flask
-# run the app server
 
+# run the app server in development mode
 ENTRYPOINT ["/api/entrypoint.sh"]
 CMD [ "development" ]

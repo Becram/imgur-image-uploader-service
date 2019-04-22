@@ -8,9 +8,9 @@
 | 4|Orchestrator | Docker Compose      |  
 
 
-This is a service to upload images to imgur.com via its api endpoints. It tasks json object to upload the image ashychronosly. It implements [celery](http://www.celeryproject.org/) queue with [Redis](https://redis.io/) to perform the ashynchronity of the tasks. 
+This is a service to upload images to [imgur.com](https://www.imgur.com) via its api endpoints. It tasks json object to upload the image ashychronosly. It implements [celery](http://www.celeryproject.org/) queue with [Redis](https://redis.io/) to perform the ashynchronity of the tasks. 
 
-First of register an app in [imgur](https://api.imgur.com/oauth2/addclient) and get a **Client-ID** and the id to [celery-queue/tasks.py](celery-queue/tasks.py)
+First of all, register an app in [imgur](https://api.imgur.com/oauth2/addclient) and get a **Client-ID** and add the id to [celery-queue/tasks.py](celery-queue/tasks.py)
 
 ```python
 ...
@@ -27,7 +27,7 @@ celery = Celery('tasks', broker=CELERY_BROKER_URL,
 
 
 ```bash
-git clone https://github.com/becram/imgur-image-uploader-service
+git clone https://github.com/Becram/imgur-image-uploader-service
 ```
 
 ### Build & Launch
@@ -174,5 +174,6 @@ docker-compose down
 
 To change the endpoints, update the code in [api/app.py](api/app.py)
 
-## TO-DO: There is some issue in updation of the completed list which can be fixed using external datastore.
-
+## TO-DO: 
+* There is some issue in updation of the completed list which can be fixed using external datastore.
+* Add production mode

@@ -1,7 +1,7 @@
 FROM python:3.6.1
 MAINTAINER Bikram Dhoju <itsbecram@gmail.com>
 
-
+# Get UPLOAD Args for upload folder
 ARG UPLOAD_FOLDER
 ENV UPLOAD_FOLDER $UPLOAD_FOLDER
 RUN mkdir -p $UPLOAD_FOLDER
@@ -22,6 +22,7 @@ RUN pip install -r /requirements.txt
 
 COPY . /queue
 
+#Code ownership
 RUN chown -R celery:celerygroup /queue
 RUN chown -R celery:celerygroup $UPLOAD_FOLDER
 
