@@ -15,8 +15,8 @@ args=("$@")
 
 case $1 in
     production)
-        log notice "Running Gunicorn in Production Mode"
-        exec /usr/local/bin/gunicorn app:app --user=flask -b 0.0.0.0:8080 -w 4 
+        log notice "Running Gunicorn in Production Mode.< Add command @ entrypoint.sh>"
+        
        ;;
     development)
         log notice "Running in Development Mode"

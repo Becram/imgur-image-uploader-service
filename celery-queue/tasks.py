@@ -1,9 +1,6 @@
 import os
 import time
 from celery import Celery
-from celery import group
-from celery import chord
-from celery import shared_task
 import logging
 from logging.handlers import RotatingFileHandler
 import requests
@@ -19,7 +16,8 @@ CELERY_BROKER_URL = os.environ.get(
 CELERY_RESULT_BACKEND = os.environ.get(
     'CELERY_RESULT_BACKEND', 'redis://localhost:6379')
 
-UPLOAD_FOLDER = "/upload_files"
+UPLOAD_FOLDER = os.environ.get(
+    'UPLOAD_FOLDER', '/upload_files')
 
 ALLOWED_EXTENSIONS = set(['jpeg', 'png', 'jpg'])
 Client_ID = 'e5451a6ff4ab502'
@@ -32,7 +30,7 @@ def get_filename(image_url):
     if image_url.find('/'):
         return image_url.rsplit('/', 1)[1]
 
-
+# Download image from url and save at $UPLOAD_FOLDER
 def download_image(image_url):
     response = requests.get(image_url, stream=True)
 
@@ -43,7 +41,7 @@ def download_image(image_url):
             imageFile.write(chunk)
     return UPLOAD_FOLDER + "/" + get_filename(image_url)
 
-
+# Uploading image to the imgur api endpoint
 def upload_imgur(image_name):
 
     data = {}
@@ -69,20 +67,7 @@ def upload_imgur(image_name):
         return data
 
 
-    # try:
-    #     pprint("**** {}".format(response.text))
-    #     response_data = response.json()
-    #     data['id'] = response.json()['data']['id']
-    #     data['status'] = response.json()['status']
-    #     data['link'] = response.json()['data']['link']
-        
-    #     # logger.info(str(json_data))
-    #     return data
-    # except KeyError:
-    #     link = "Failed"
-    #     return link
-
-
+#Convert json into list
 def get_urllist(data):
     urls_json = json.loads(data)
     url_list = []
@@ -91,28 +76,8 @@ def get_urllist(data):
     return url_list
 
 
-@celery.task(name='tasks.add')
-def add(x: int, y: int) -> int:
-    time.sleep(5)
-    return x + y
 
-
-
-def get_url(x: str) -> str:
-	group_urls = []
-	url_list = get_urllist(x)
-	for url in url_list:
-		group_urls.append('upload_image({})'.format(url))
-	fetch_jobs = group(group_urls)
-	return chord(fetch_jobs).get()
-
-# @celery.task(name='tasks.upload')
-# def upload_image(url: str) -> str:
-#     img_url = "https://cdn0.tnwcdn.com/wp-content/blogs.dir/1/files/2018/06/instagram-796x431.png"
-#     image_link = upload_imgur(download_image(url))
-#     return image_link
-
-
+#Ashynchronlusly upload image and get the status and send it to app.py
 @celery.task(name='tasks.upload', bind=True)
 def upload_task(self, urls):
     job_created= datetime.now()
@@ -123,19 +88,20 @@ def upload_task(self, urls):
     
     for url in url_list:
         self.update_state(state='in-progress',
-                        meta={'completed': None,'pending': url, 'created':job_created})
+                        meta={'pending': url, 'created':job_created})
         pprint(url)
         image_link = upload_imgur(download_image(url))
         
         if image_link['status'] == 200:
             completed_list.append(image_link['link'])
+            
             self.update_state(state='in-progress',
                         meta={'completed': image_link['link'], 'created':job_created, 'pending': None})
+            time.sleep(2)
         else:
 
             self.update_state(state='failed',
                         meta={'error':image_link['error']})
             error_list.append("ERROR URL {}".format(url)+"==> "+image_link['error']['message'])
-        time.sleep(1)
-        pprint(completed_list)
+        
     return {'status': 'completed', 'completed':completed_list, 'finished': datetime.now(), 'created': job_created,'error': error_list}

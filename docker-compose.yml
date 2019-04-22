@@ -3,26 +3,31 @@ services:
   web:
     build:
       context: ./api
-      dockerfile: Dockerfile.prod
-      args:
-        UPLOAD_FOLDER : /upload_files
+      dockerfile: Dockerfile
     restart: always
     ports:
-      - "80:8080"
+      - "8080:8080"
+    environment:
+      - FLASK_APP=app
+      - FLASK_ENV=development
+    volumes:
+      - ./api:/api
     depends_on:
       - redis
   worker:
     build:
       context: celery-queue
       dockerfile: Dockerfile
+      args: 
+        UPLOAD_FOLDER: /upload_files
     depends_on:
       - redis
   monitor:
     build:
       context: celery-queue
       dockerfile: Dockerfile
-      args:
-        UPLOAD_FOLDER : /upload_files
+      args: 
+        UPLOAD_FOLDER: /upload_files
     ports:
      - "5555:5555"
     entrypoint: flower
